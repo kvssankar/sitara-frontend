@@ -49,7 +49,7 @@ export default function Intents() {
           <SideNavigation
             header={{
               href: "#",
-              text: `Sitara`,
+              text: `Sitaara`,
             }}
             items={navLinks}
           />

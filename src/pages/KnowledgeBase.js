@@ -54,7 +54,7 @@ export default function KnowledgeBase() {
           <SideNavigation
             header={{
               href: "#",
-              text: `Sitara`,
+              text: `Sitaara`,
             }}
             items={navLinks}
           />

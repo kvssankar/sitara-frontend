@@ -40,7 +40,7 @@ export default function Home() {
   //   ]
   useEffect(() => {
     const testId = "684d43c3234f6819aae4d80e";
-    const app = "Sitara";
+    const app = "Sitaara";
     const initialPrompt = searchParams.get("initialPrompt");
     if (testId) {
       localStorage.setItem("userId", testId);
@@ -63,7 +63,7 @@ export default function Home() {
           <SideNavigation
             header={{
               href: "#",
-              text: `Sitara`,
+              text: `Sitaara`,
             }}
             items={navLinks}
           />

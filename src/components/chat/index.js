@@ -60,14 +60,14 @@ export default function ChatMain() {
   const [searchParams] = useSearchParams();
   const [sessionId, setSessionId] = useState(() => {
     // Generate session ID on page load
-    const existingSessionId = sessionStorage.getItem("sessionId");
-    if (existingSessionId) {
-      return existingSessionId;
-    } else {
-      const newSessionId = nanoid();
-      sessionStorage.setItem("sessionId", newSessionId);
-      return newSessionId;
-    }
+    // const existingSessionId = sessionStorage.getItem("sessionId");
+    // if (existingSessionId) {
+    //   return existingSessionId;
+    // } else {
+    const newSessionId = nanoid();
+    sessionStorage.setItem("sessionId", newSessionId);
+    return newSessionId;
+    // }
   });
 
   const [messages, setMessages] = useState([
@@ -78,9 +78,7 @@ export default function ChatMain() {
       timestamp: getTimestampMinutesAgo(0),
     },
   ]);
-  const [prompt, setPrompt] = useState(
-    searchParams.get("initialPrompt") || ""
-  );
+  const [prompt, setPrompt] = useState(searchParams.get("initialPrompt") || "");
   const [isGenAiResponseLoading, setIsGenAiResponseLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
   const messagesContainerRef = useRef(null);

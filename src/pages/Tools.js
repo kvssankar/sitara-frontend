@@ -49,7 +49,7 @@ export default function Tools() {
           <SideNavigation
             header={{
               href: "#",
-              text: `Sitara`,
+              text: `Sitaara`,
             }}
             items={navLinks}
           />
