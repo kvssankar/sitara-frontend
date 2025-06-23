@@ -35,7 +35,7 @@ const KnowledgeFileUpload = ({ onUploadSuccess, setFlashMessages }) => {
       ]);
       return;
     }
-
+ 
     setIsUploading(true);
 
     try {
