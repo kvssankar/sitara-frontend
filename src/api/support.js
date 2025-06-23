@@ -71,3 +71,30 @@ export const updateSupportCase = async (caseId, updateData) => {
   });
   return response.data;
 };
+
+export const getSupportCaseMessages = async (caseId) => {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: localStorage.getItem("userId"),
+  };
+  const response = await axios.get(`${BASE_URL}/cases/${caseId}/messages`, {
+    headers,
+  });
+  return response.data;
+};
+
+// Get case summary
+export const getSupportCaseSummary = async (
+  caseId,
+  forceRegenerate = false
+) => {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: localStorage.getItem("userId"),
+  };
+  const response = await axios.get(
+    `${BASE_URL}/cases/${caseId}/summary?force=${forceRegenerate}`,
+    { headers }
+  );
+  return response.data;
+};

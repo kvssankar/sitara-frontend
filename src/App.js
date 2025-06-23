@@ -6,10 +6,14 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import Tools from "./pages/Tools";
 import ChatBox from "./pages/Chat";
 import CreateSupportCasePage from "./pages/CreateSupportCase";
+import SupportCases from "./pages/SupportCases";
+import SupportChatPage from "./pages/SupportChatPage";
 
 function App() {
   return (
     <Routes>
+      <Route path="/support/cases" element={<SupportCases />} />
+      <Route path="/support/cases/:caseId/chat" element={<SupportChatPage />} />
       <Route path="/support/create-case" element={<CreateSupportCasePage />} />
       <Route path="/chat" element={<ChatBox />} />
       <Route path="/knowledge-base" element={<KnowledgeBase />} />
