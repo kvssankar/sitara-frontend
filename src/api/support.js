@@ -40,6 +40,19 @@ export const addSupportCaseMessage = async (caseId, messageData) => {
   return response.data;
 };
 
+export const processNewCase = async (caseId) => {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: localStorage.getItem("userId"),
+  };
+  const response = await axios.post(
+    `${BASE_URL}/cases/process/new`,
+    { caseId },
+    { headers }
+  );
+  return response.data;
+};
+
 // Get support case details
 export const getSupportCase = async (caseId) => {
   const headers = {

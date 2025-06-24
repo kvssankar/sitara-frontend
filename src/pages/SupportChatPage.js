@@ -32,21 +32,16 @@ export default function SupportChatPage() {
         onToolsChange={(open) => setToolsOpen(open.detail.open)}
         navigation={
           <SideNavigation
-            header={{ href: "#", text: "Support Portal" }}
+            header={{
+              href: "#",
+              text: "Support Portal",
+            }}
             items={[
-              ...navLinks,
+              { type: "link", text: "My Tickets", href: "/support/cases" },
               {
-                type: "section",
-                text: "Support",
-                items: [
-                  {
-                    type: "link",
-                    text: "Create Ticket",
-                    href: "/support/create-case",
-                  },
-                  { type: "link", text: "My Tickets", href: "/support/cases" },
-                  { type: "link", text: "Knowledge Base", href: "/support/kb" },
-                ],
+                type: "link",
+                text: "Create Ticket",
+                href: "/support/create-case",
               },
             ]}
           />

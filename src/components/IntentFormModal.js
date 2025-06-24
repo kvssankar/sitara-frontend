@@ -23,6 +23,7 @@ const IntentFormModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     intent: "",
+    description: "",
     steps: "",
     tools: [],
   });
@@ -32,6 +33,7 @@ const IntentFormModal = ({
       setFormData({
         intentid: intent.intentid,
         intent: intent.intent,
+        description: intent.description || "",
         steps: intent.steps,
         tools: intent.tools || [],
       });
@@ -44,6 +46,7 @@ const IntentFormModal = ({
     setSubmitting(true);
     const newIntent = {
       intent: formData.intent,
+      description: formData.description,
       steps: formData.steps,
       tools: formData.tools,
       createdDate: new Date().toISOString(),
@@ -152,6 +155,19 @@ const IntentFormModal = ({
                   handleInputChange("intent", detail.value)
                 }
                 placeholder="Enter Topic Name"
+              />
+            </FormField>
+            <FormField
+              label="Description"
+              description="Enter a description for the intent."
+            >
+              <Textarea
+                value={formData.description}
+                onChange={({ detail }) =>
+                  handleInputChange("description", detail.value)
+                }
+                placeholder="Describe the intent purpose and functionality"
+                rows={3}
               />
             </FormField>
             <FormField

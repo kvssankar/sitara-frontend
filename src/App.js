@@ -19,7 +19,7 @@ function App() {
       <Route path="/knowledge-base" element={<KnowledgeBase />} />
       <Route path="/intents" element={<Intents />} />
       <Route path="/tools" element={<Tools />} />
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Intents />} />
     </Routes>
   );
 }

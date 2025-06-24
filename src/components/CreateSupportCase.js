@@ -21,6 +21,7 @@ import {
   createSupportCase,
   getSupportCaseUploadUrl,
   addSupportCaseMessage,
+  processNewCase,
 } from "../api/support";
 import axios from "axios";
 
@@ -123,7 +124,10 @@ export default function CreateSupportCase() {
         content: formData.description,
         messageType: mediaUrls.length > 0 ? "mixed" : "text",
         mediaUrls,
+        isNewTicket: true,
       });
+
+      processNewCase(caseId);
 
       // Success! Reset form
       setFormData({
