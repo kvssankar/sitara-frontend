@@ -1,152 +1,133 @@
-// src/components/CreateSupportCase.js
-
 import React, { useState } from "react";
 import {
-  Form,
-  SpaceBetween,
-  Button,
   Container,
   Header,
-  FormField,
-  Input,
+  SpaceBetween,
+  Button,
   Textarea,
-  Select,
-  FileUpload,
   Alert,
-  ProgressBar,
+  Cards,
+  Badge,
   Box,
+  FormField,
   ContentLayout,
 } from "@cloudscape-design/components";
 import {
+  searchIntents,
   createSupportCase,
-  getSupportCaseUploadUrl,
   addSupportCaseMessage,
   processNewCase,
 } from "../api/support";
-import axios from "axios";
 
 export default function CreateSupportCase() {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    priority: { label: "Medium", value: "medium" },
-    customerId: "customer123", // You can get this from auth context
-  });
-
-  const [files, setFiles] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
+  const [issueText, setIssueText] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [matchingIntents, setMatchingIntents] = useState([]);
+  const [isCreating, setIsCreating] = useState(false);
   const [flashMessage, setFlashMessage] = useState(null);
+  const [wordCount, setWordCount] = useState(0);
+  const [hasMinimumWords, setHasMinimumWords] = useState(false);
 
-  const priorityOptions = [
-    { label: "Low", value: "low" },
-    { label: "Medium", value: "medium" },
-    { label: "High", value: "high" },
-    { label: "Urgent", value: "urgent" },
-  ];
+  const customerId = localStorage.getItem("userId") || "";
 
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  // Helper function to count words
+  const countWords = (text) => {
+    if (!text.trim()) return 0;
+    return text.trim().split(/\s+/).length;
   };
-  const uploadFile = async (file, caseId) => {
-    try {
-      // Get presigned URL
-      const { uploadUrl, publicUrl } = await getSupportCaseUploadUrl(
-        caseId,
-        file.name,
-        file.type
-      );
-
-      // Upload file to S3
-      await axios.put(uploadUrl, file, {
-        headers: {
-          "Content-Type": file.type,
-        },
-      });
-
-      return publicUrl;
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      throw error;
-    }
+  // Handle text change with word validation
+  const handleTextChange = (value) => {
+    setIssueText(value);
+    const words = countWords(value);
+    setWordCount(words);
+    setHasMinimumWords(words >= 10);
   };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.title.trim() || !formData.description.trim()) {
+  const handleSearch = async () => {
+    if (!issueText.trim()) {
       setFlashMessage({
-        type: "error",
-        content: "Please fill in both title and description",
+        type: "warning",
+        content: "Please describe your issue to continue",
+        dismissible: true,
+      });
+      return;
+    }
+    if (!hasMinimumWords) {
+      setFlashMessage({
+        type: "warning",
+        content:
+          "Please provide at least 10 words in your description to search for matching categories",
         dismissible: true,
       });
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSearching(true);
     setFlashMessage(null);
+
     try {
-      // Step 1: Create the support case
+      const result = await searchIntents(issueText.trim());
+      if (result.success && result.intents.length > 0) {
+        setMatchingIntents(result.intents);
+      } else {
+        setMatchingIntents([]);
+        setFlashMessage({
+          type: "info",
+          content:
+            "No matching categories found. You can create a general support case.",
+          dismissible: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error searching intents:", error);
+      setFlashMessage({
+        type: "error",
+        content: "Failed to process your request. Please try again.",
+        dismissible: true,
+      });
+      setMatchingIntents([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleIntentSelect = async (intent) => {
+    setIsCreating(true);
+    setFlashMessage(null);
+
+    try {
+      // Create the support case with intent as title
       const supportCase = await createSupportCase({
-        customerId: formData.customerId,
-        title: formData.title,
-        description: formData.description,
-        priority: formData.priority.value,
+        customerId,
+        title: intent.intent,
+        description: issueText,
+        priority: "medium",
+        intentId: intent.intentId || intent.intentid,
       });
 
       const caseId = supportCase.caseId;
 
-      // Step 2: Upload files if any
-      let mediaUrls = [];
-      if (files.length > 0) {
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
-
-          try {
-            const fileUrl = await uploadFile(file, caseId);
-            mediaUrls.push(fileUrl);
-            setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
-          } catch (error) {
-            console.error(`Failed to upload ${file.name}:`, error);
-            setUploadProgress((prev) => ({ ...prev, [file.name]: -1 }));
-          }
-        }
-      }
-
-      // Step 3: Add initial message with description and files
+      // Add initial message with user's description
       await addSupportCaseMessage(caseId, {
-        senderId: formData.customerId,
+        senderId: customerId,
         senderType: "customer",
-        content: formData.description,
-        messageType: mediaUrls.length > 0 ? "mixed" : "text",
-        mediaUrls,
+        content: issueText,
+        messageType: "text",
+        mediaUrls: [],
         isNewTicket: true,
       });
 
+      // Process the new case
       processNewCase(caseId);
 
       // Success! Reset form
-      setFormData({
-        title: "",
-        description: "",
-        priority: { label: "Medium", value: "medium" },
-        customerId: formData.customerId,
-      });
-      setFiles([]);
-      setUploadProgress({});
+      setIssueText("");
+      setMatchingIntents([]);
 
       setFlashMessage({
         type: "success",
         content: `Support case created successfully! Case ID: ${caseId}`,
         dismissible: true,
       });
-
-      // You can redirect to the case detail page here
-      // window.location.href = `/support/cases/${caseId}`;
     } catch (error) {
       console.error("Error creating support case:", error);
       setFlashMessage({
@@ -155,210 +136,149 @@ export default function CreateSupportCase() {
         dismissible: true,
       });
     } finally {
-      setIsSubmitting(false);
+      setIsCreating(false);
     }
   };
 
-  const handleFileChange = ({ detail }) => {
-    const selectedFiles = Array.from(detail.value);
+  const handleCreateWithoutIntent = async () => {
+    setIsCreating(true);
+    setFlashMessage(null);
 
-    // Filter for allowed file types
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "application/pdf",
-      "text/plain",
-    ];
-    const validFiles = selectedFiles.filter((file) => {
-      if (!allowedTypes.includes(file.type)) {
-        setFlashMessage({
-          type: "warning",
-          content: `File type ${file.type} is not supported. Please upload images, PDFs, or text files.`,
-          dismissible: true,
-        });
-        return false;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        // 10MB limit
-        setFlashMessage({
-          type: "warning",
-          content: `File ${file.name} is too large. Maximum size is 10MB.`,
-          dismissible: true,
-        });
-        return false;
-      }
-      return true;
-    });
+    try {
+      // Create general support case with user's text as title (truncated)
+      const title =
+        issueText.length > 100
+          ? issueText.substring(0, 100) + "..."
+          : issueText;
 
-    setFiles(validFiles);
+      const supportCase = await createSupportCase({
+        customerId,
+        title,
+        description: issueText,
+        priority: "medium",
+      });
+
+      const caseId = supportCase.caseId;
+
+      // Add initial message
+      await addSupportCaseMessage(caseId, {
+        senderId: customerId,
+        senderType: "customer",
+        content: issueText,
+        messageType: "text",
+        mediaUrls: [],
+        isNewTicket: true,
+      });
+
+      processNewCase(caseId);
+
+      // Success! Reset form
+      setIssueText("");
+      setMatchingIntents([]);
+
+      setFlashMessage({
+        type: "success",
+        content: `Support case created successfully! Case ID: ${caseId}`,
+        dismissible: true,
+      });
+    } catch (error) {
+      console.error("Error creating support case:", error);
+      setFlashMessage({
+        type: "error",
+        content: "Failed to create support case. Please try again.",
+        dismissible: true,
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
-    <ContentLayout
-      header={
-        <Header
-          variant="h1"
-          description="Submit a support request and our team will assist you"
-        >
-          Create Support Ticket
-        </Header>
-      }
-    >
-      <SpaceBetween direction="vertical" size="l">
-        {flashMessage && (
-          <Alert
-            type={flashMessage.type}
-            dismissible={flashMessage.dismissible}
-            onDismiss={() => setFlashMessage(null)}
-          >
-            {flashMessage.content}
-          </Alert>
-        )}
-
-        <Container>
-          <form onSubmit={handleSubmit}>
-            <Form
-              actions={
-                <SpaceBetween direction="horizontal" size="xs">
-                  <Button
-                    formAction="none"
-                    variant="link"
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    loading={isSubmitting}
-                    disabled={
-                      !formData.title.trim() || !formData.description.trim()
-                    }
-                  >
-                    {isSubmitting
-                      ? "Creating Ticket..."
-                      : "Create Support Ticket"}
-                  </Button>
-                </SpaceBetween>
-              }
+    <ContentLayout>
+      <Container>
+        <SpaceBetween size="l">
+          <Header variant="h1">Create Support Case</Header>
+          {flashMessage && (
+            <Alert
+              type={flashMessage.type}
+              dismissible={flashMessage.dismissible}
+              onDismiss={() => setFlashMessage(null)}
             >
-              <SpaceBetween direction="vertical" size="l">
-                <FormField
-                  label="Issue Title"
-                  description="Provide a brief, clear title for your issue"
-                  constraintText="Required"
-                >
-                  <Input
-                    value={formData.title}
-                    onChange={({ detail }) =>
-                      handleInputChange("title", detail.value)
-                    }
-                    placeholder="Brief description of your issue..."
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-
-                <FormField
-                  label="Priority"
-                  description="Select the urgency level of your issue"
-                >
-                  <Select
-                    selectedOption={formData.priority}
-                    onChange={({ detail }) =>
-                      handleInputChange("priority", detail.selectedOption)
-                    }
-                    options={priorityOptions}
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-
-                <FormField
-                  label="Description"
-                  description="Provide detailed information about your issue"
-                  constraintText="Required"
-                >
-                  <Textarea
-                    value={formData.description}
-                    onChange={({ detail }) =>
-                      handleInputChange("description", detail.value)
-                    }
-                    placeholder="Please provide a detailed description of your issue. Include any error messages, steps to reproduce, or relevant information that might help us assist you better..."
-                    rows={8}
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-
-                <FormField
-                  label="Attachments"
-                  description="Upload relevant files (images, PDFs, text files)"
-                  constraintText="PNG, JPG, PDF up to 10MB each"
-                >
-                  <FileUpload
-                    onChange={handleFileChange}
-                    value={files}
-                    multiple={true}
-                    accept="image/*,.pdf,.txt"
-                    showFileLastModified={true}
-                    showFileSize={true}
-                    showFileThumbnail={true}
-                    tokenLimit={5}
-                    i18nStrings={{
-                      uploadButtonText: (e) =>
-                        e ? "Choose files" : "Choose file",
-                      dropzoneText: (e) =>
-                        e ? "Drop files to upload" : "Drop file to upload",
-                      removeFileAriaLabel: (e) => `Remove file ${e + 1}`,
-                      limitShowFewer: "Show fewer files",
-                      limitShowMore: "Show more files",
-                      errorIconAriaLabel: "Error",
-                    }}
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-
-                {/* Show upload progress for files */}
-                {Object.keys(uploadProgress).length > 0 && (
-                  <FormField label="Upload Progress">
-                    <SpaceBetween direction="vertical" size="s">
-                      {Object.entries(uploadProgress).map(
-                        ([fileName, progress]) => (
-                          <Box key={fileName}>
-                            <SpaceBetween
-                              direction="horizontal"
-                              size="s"
-                              alignItems="center"
-                            >
-                              <Box variant="small">{fileName}</Box>
-                              {progress === 100 ? (
-                                <Box
-                                  variant="small"
-                                  color="text-status-success"
-                                >
-                                  ✓ Uploaded
-                                </Box>
-                              ) : progress === -1 ? (
-                                <Box variant="small" color="text-status-error">
-                                  ✗ Failed
-                                </Box>
-                              ) : (
-                                <ProgressBar
-                                  value={progress}
-                                  description={`${progress}%`}
-                                  size="small"
-                                />
-                              )}
-                            </SpaceBetween>
-                          </Box>
-                        )
+              {flashMessage.content}
+            </Alert>
+          )}{" "}
+          <FormField
+            label="Describe your issue"
+            description={`Please provide details about the problem you're experiencing (${wordCount}/10 words minimum)`}
+            errorText={
+              wordCount > 0 && !hasMinimumWords
+                ? `Please add ${10 - wordCount} more words to enable search`
+                : undefined
+            }
+          >
+            <Textarea
+              value={issueText}
+              onChange={(e) => handleTextChange(e.detail.value)}
+              placeholder="Enter your issue description here..."
+              rows={6}
+            />
+          </FormField>{" "}
+          <Box textAlign="left">
+            <Button
+              variant="primary"
+              onClick={handleSearch}
+              loading={isSearching}
+              disabled={!issueText.trim() || !hasMinimumWords || isCreating}
+            >
+              {isSearching ? "Processing..." : "Create"}
+            </Button>
+          </Box>
+          {matchingIntents.length > 0 && (
+            <SpaceBetween size="m">
+              <Header variant="h2">
+                Select the category that best matches your issue:
+              </Header>
+              <Cards
+                cardDefinition={{
+                  header: (item) => (
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <Header variant="h3">{item.intent}</Header>
+                      {item.confidenceScore && (
+                        <Badge
+                          color={item.confidenceScore > 80 ? "green" : "blue"}
+                        >
+                          {Math.round(item.confidenceScore)}% match
+                        </Badge>
                       )}
                     </SpaceBetween>
-                  </FormField>
-                )}
-              </SpaceBetween>
-            </Form>
-          </form>
-        </Container>
-      </SpaceBetween>
+                  ),
+                  sections: [
+                    {
+                      id: "description",
+                      content: (item) =>
+                        item.description || "Category for similar issues",
+                    },
+                    {
+                      id: "actions",
+                      content: (item) => (
+                        <Button
+                          variant="primary"
+                          onClick={() => handleIntentSelect(item)}
+                          loading={isCreating}
+                          disabled={isCreating}
+                        >
+                          Select This Category
+                        </Button>
+                      ),
+                    },
+                  ],
+                }}
+                items={matchingIntents}
+              />
+            </SpaceBetween>
+          )}
+        </SpaceBetween>
+      </Container>
     </ContentLayout>
   );
 }

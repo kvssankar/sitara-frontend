@@ -2,6 +2,23 @@ import axios from "axios";
 
 const BASE_URL = `${process.env.REACT_APP_API_URL}/support`;
 
+// Add this function to the existing support.js file
+export const searchIntents = async (text) => {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: localStorage.getItem("userId"),
+  };
+  const response = await axios.post(
+    `${BASE_URL}/search-intents`,
+    {
+      text,
+      userId: localStorage.getItem("userId"),
+    },
+    { headers }
+  );
+  return response.data;
+};
+
 // Create a new support case
 export const createSupportCase = async (caseData) => {
   const headers = {

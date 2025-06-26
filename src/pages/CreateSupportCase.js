@@ -10,7 +10,6 @@ import {
 } from "@cloudscape-design/components";
 import { I18nProvider } from "@cloudscape-design/components/i18n";
 import messages from "@cloudscape-design/components/i18n/messages/all.en";
-import { navLinks } from "../constants";
 import CreateSupportCase from "../components/CreateSupportCase";
 
 const LOCALE = "en";
@@ -60,10 +59,9 @@ export default function CreateSupportCasePage() {
           <HelpPanel header={<h2>Support Ticket Help</h2>}>
             <p>To create an effective support ticket:</p>
             <ul>
-              <li>Provide a clear, descriptive title</li>
-              <li>Include detailed steps to reproduce the issue</li>
-              <li>Attach relevant screenshots or files</li>
-              <li>Select the appropriate priority level</li>
+              <li>Provide a clear description of your issue</li>
+              <li>Include detailed steps to reproduce the problem</li>
+              <li>Select the most relevant category when available</li>
             </ul>
             <p>
               Our support team typically responds within 24 hours for standard
