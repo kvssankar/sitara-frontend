@@ -1,3 +1,5 @@
+// src/components/CreateSupportCase.js
+
 import React, { useState } from "react";
 import {
   Container,
@@ -27,6 +29,7 @@ export default function CreateSupportCase() {
   const [flashMessage, setFlashMessage] = useState(null);
   const [wordCount, setWordCount] = useState(0);
   const [hasMinimumWords, setHasMinimumWords] = useState(false);
+  const [showNoIntentsMessage, setShowNoIntentsMessage] = useState(false);
 
   const customerId = localStorage.getItem("userId") || "";
 
@@ -35,13 +38,20 @@ export default function CreateSupportCase() {
     if (!text.trim()) return 0;
     return text.trim().split(/\s+/).length;
   };
+
   // Handle text change with word validation
   const handleTextChange = (value) => {
     setIssueText(value);
     const words = countWords(value);
     setWordCount(words);
     setHasMinimumWords(words >= 10);
+
+    // Hide no intents message when user starts typing again
+    if (showNoIntentsMessage) {
+      setShowNoIntentsMessage(false);
+    }
   };
+
   const handleSearch = async () => {
     if (!issueText.trim()) {
       setFlashMessage({
@@ -63,19 +73,35 @@ export default function CreateSupportCase() {
 
     setIsSearching(true);
     setFlashMessage(null);
+    setShowNoIntentsMessage(false);
 
     try {
       const result = await searchIntents(issueText.trim());
-      if (result.success && result.intents.length > 0) {
-        setMatchingIntents(result.intents);
+
+      if (result.success) {
+        // Check if case was created automatically (only 1 intent found)
+        if (result.caseId) {
+          // Case created automatically - show success message
+          setIssueText("");
+          setMatchingIntents([]);
+          setShowNoIntentsMessage(false);
+          setFlashMessage({
+            type: "success",
+            content: `Support case created automatically! Case ID: ${result.caseId}. Your issue has been matched to the most relevant category and our support team has been notified.`,
+            dismissible: true,
+          });
+        } else if (result.intents && result.intents.length > 0) {
+          // Multiple intents found - show selection
+          setMatchingIntents(result.intents);
+          setShowNoIntentsMessage(false);
+        } else {
+          // No intents found - show message below textarea
+          setMatchingIntents([]);
+          setShowNoIntentsMessage(true);
+        }
       } else {
         setMatchingIntents([]);
-        setFlashMessage({
-          type: "info",
-          content:
-            "No matching categories found. You can create a general support case.",
-          dismissible: true,
-        });
+        setShowNoIntentsMessage(true);
       }
     } catch (error) {
       console.error("Error searching intents:", error);
@@ -85,6 +111,7 @@ export default function CreateSupportCase() {
         dismissible: true,
       });
       setMatchingIntents([]);
+      setShowNoIntentsMessage(false);
     } finally {
       setIsSearching(false);
     }
@@ -122,59 +149,7 @@ export default function CreateSupportCase() {
       // Success! Reset form
       setIssueText("");
       setMatchingIntents([]);
-
-      setFlashMessage({
-        type: "success",
-        content: `Support case created successfully! Case ID: ${caseId}`,
-        dismissible: true,
-      });
-    } catch (error) {
-      console.error("Error creating support case:", error);
-      setFlashMessage({
-        type: "error",
-        content: "Failed to create support case. Please try again.",
-        dismissible: true,
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleCreateWithoutIntent = async () => {
-    setIsCreating(true);
-    setFlashMessage(null);
-
-    try {
-      // Create general support case with user's text as title (truncated)
-      const title =
-        issueText.length > 100
-          ? issueText.substring(0, 100) + "..."
-          : issueText;
-
-      const supportCase = await createSupportCase({
-        customerId,
-        title,
-        description: issueText,
-        priority: "medium",
-      });
-
-      const caseId = supportCase.caseId;
-
-      // Add initial message
-      await addSupportCaseMessage(caseId, {
-        senderId: customerId,
-        senderType: "customer",
-        content: issueText,
-        messageType: "text",
-        mediaUrls: [],
-        isNewTicket: true,
-      });
-
-      processNewCase(caseId);
-
-      // Success! Reset form
-      setIssueText("");
-      setMatchingIntents([]);
+      setShowNoIntentsMessage(false);
 
       setFlashMessage({
         type: "success",
@@ -206,7 +181,7 @@ export default function CreateSupportCase() {
             >
               {flashMessage.content}
             </Alert>
-          )}{" "}
+          )}
           <FormField
             label="Describe your issue"
             description={`Please provide details about the problem you're experiencing (${wordCount}/10 words minimum)`}
@@ -222,7 +197,28 @@ export default function CreateSupportCase() {
               placeholder="Enter your issue description here..."
               rows={6}
             />
-          </FormField>{" "}
+          </FormField>
+
+          {/* Show message below textarea when no intents are found */}
+          {showNoIntentsMessage && (
+            <Alert type="info" dismissible={false}>
+              <SpaceBetween size="xs">
+                <div>
+                  <strong>No matching categories found.</strong>
+                </div>
+                <div>
+                  Please add more details to your issue description to help us
+                  find the most relevant category for your problem.
+                </div>
+                <div>
+                  If you're unable to find a matching category after multiple
+                  attempts, please contact our customer care team directly for
+                  assistance.
+                </div>
+              </SpaceBetween>
+            </Alert>
+          )}
+
           <Box textAlign="left">
             <Button
               variant="primary"
@@ -233,6 +229,7 @@ export default function CreateSupportCase() {
               {isSearching ? "Processing..." : "Create"}
             </Button>
           </Box>
+
           {matchingIntents.length > 0 && (
             <SpaceBetween size="m">
               <Header variant="h2">
@@ -254,26 +251,20 @@ export default function CreateSupportCase() {
                   ),
                   sections: [
                     {
-                      id: "description",
                       content: (item) =>
-                        item.description || "Category for similar issues",
-                    },
-                    {
-                      id: "actions",
-                      content: (item) => (
-                        <Button
-                          variant="primary"
-                          onClick={() => handleIntentSelect(item)}
-                          loading={isCreating}
-                          disabled={isCreating}
-                        >
-                          Select This Category
-                        </Button>
-                      ),
+                        item.description || "No description available",
                     },
                   ],
                 }}
                 items={matchingIntents}
+                selectionType="single"
+                onSelectionChange={({ detail }) => {
+                  if (detail.selectedItems.length > 0) {
+                    handleIntentSelect(detail.selectedItems[0]);
+                  }
+                }}
+                loading={isCreating}
+                loadingText="Creating support case..."
               />
             </SpaceBetween>
           )}
