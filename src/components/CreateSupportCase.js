@@ -144,7 +144,7 @@ export default function CreateSupportCase() {
       });
 
       // Process the new case
-      processNewCase(caseId);
+      // processNewCase(caseId);
 
       // Success! Reset form
       setIssueText("");
