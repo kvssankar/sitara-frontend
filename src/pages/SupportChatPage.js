@@ -1,4 +1,4 @@
-// src/pages/SupportChatPage.js
+// Update src/pages/SupportChatPage.js
 import React, { useState } from "react";
 import {
   AppLayout,
@@ -11,10 +11,9 @@ import {
 } from "@cloudscape-design/components";
 import { I18nProvider } from "@cloudscape-design/components/i18n";
 import messages from "@cloudscape-design/components/i18n/messages/all.en";
-import { navLinks } from "../constants";
 import { useParams } from "react-router-dom";
 import SupportCaseOverview from "../components/SupportCaseOverview";
-import SupportChat from "../components/SupportChat";
+import SupportCorrespondence from "../components/SupportCorrespondence"; // Changed import
 
 const LOCALE = "en";
 
@@ -51,20 +50,20 @@ export default function SupportChatPage() {
             items={[
               { text: "Support", href: "/support" },
               { text: "My Tickets", href: "/support/cases" },
-              { text: "Chat", href: `/support/cases/${caseId}/chat` },
+              { text: "Correspondence", href: `/support/cases/${caseId}/chat` }, // Updated text
             ]}
           />
         }
         notifications={<Flashbar items={flashMessages} />}
         toolsOpen={toolsOpen}
         tools={
-          <HelpPanel header={<h2>Support Chat Help</h2>}>
+          <HelpPanel header={<h2>Support Correspondence Help</h2>}>
             <p>Use this interface to communicate with our support team:</p>
             <ul>
-              <li>Type your messages in the text area</li>
-              <li>Attach images to help explain your issue</li>
-              <li>Press Enter to send, Shift+Enter for new line</li>
-              <li>View case details and attachments above</li>
+              <li>View the conversation history above</li>
+              <li>Type your reply in the message area</li>
+              <li>Attach files using the "Choose files" button</li>
+              <li>Click Submit to send your response</li>
             </ul>
           </HelpPanel>
         }
@@ -72,7 +71,8 @@ export default function SupportChatPage() {
           <ContentLayout>
             <SpaceBetween size="l">
               <SupportCaseOverview caseId={caseId} />
-              <SupportChat caseId={caseId} />
+              <SupportCorrespondence caseId={caseId} />{" "}
+              {/* Changed component */}
             </SpaceBetween>
           </ContentLayout>
         }

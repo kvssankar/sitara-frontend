@@ -1,0 +1,82 @@
+/* src/components/SupportCorrespondence.css */
+
+.correspondence-container {
+  border: 1px solid #d5dbdb;
+  border-radius: 8px;
+  background-color: #ffffff;
+  overflow: hidden;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.correspondence-row {
+  border-bottom: 1px solid #d5dbdb;
+}
+
+.correspondence-row:last-child {
+  border-bottom: none;
+}
+
+.correspondence-table {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 60px;
+}
+
+.correspondence-sender-cell {
+  padding: 16px;
+  background-color: #fafbfc;
+  border-right: 1px solid #d5dbdb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.correspondence-content-cell {
+  padding: 16px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .correspondence-table {
+    grid-template-columns: 1fr;
+  }
+  
+  .correspondence-sender-cell {
+    border-right: none;
+    border-bottom: 1px solid #d5dbdb;
+    background-color: #f2f3f3;
+  }
+}
+
+/* Hover effect for better UX */
+.correspondence-row:hover {
+  background-color: #f8f9fa;
+}
+
+.correspondence-row:hover .correspondence-sender-cell {
+  background-color: #f2f3f3;
+}
+
+/* Scrollbar styling */
+.correspondence-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.correspondence-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.correspondence-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.correspondence-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

@@ -16,7 +16,7 @@ import {
   Cards,
   ProgressBar,
 } from "@cloudscape-design/components";
-import { getSupportCase } from "../api/support";
+import { getSupportCase, updateSupportCase } from "../api/support";
 
 const PRIORITY_COLORS = {
   low: "green",
@@ -49,8 +49,9 @@ export default function SupportCaseOverview({ caseId }) {
   const [loading, setLoading] = useState(true);
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [resolutionLoading, setResolutionLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
+  const [updateError, setUpdateError] = useState(null);
 
   useEffect(() => {
     if (caseId) {
@@ -63,6 +64,20 @@ export default function SupportCaseOverview({ caseId }) {
       setLoading(true);
       const caseResponse = await getSupportCase(caseId);
       setCaseData(caseResponse);
+
+      // Parse summary if it exists and is a string
+      if (caseResponse.summary && typeof caseResponse.summary === "string") {
+        try {
+          setSummaryData(JSON.parse(caseResponse.summary));
+        } catch (e) {
+          console.warn("Could not parse summary JSON:", e);
+        }
+      } else if (
+        caseResponse.summary &&
+        typeof caseResponse.summary === "object"
+      ) {
+        setSummaryData(caseResponse.summary);
+      }
     } catch (error) {
       console.error("Error loading case data:", error);
     } finally {
@@ -70,37 +85,48 @@ export default function SupportCaseOverview({ caseId }) {
     }
   };
 
-  const generateSummary = async () => {
+  const handleMarkResolved = async () => {
     try {
-      setSummaryLoading(true);
-      setSummaryError(null);
+      setResolutionLoading(true);
+      setUpdateError(null);
 
-      // Call the POST endpoint to generate new summary
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/support/cases/${caseId}/summary`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: localStorage.getItem("userId"),
-          },
-        }
-      );
+      await updateSupportCase(caseId, {
+        resolved: true,
+        status: "resolved",
+      });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setSummaryData(result.summary);
-        setSummaryModalVisible(true);
-      } else {
-        setSummaryError(result.message || "Failed to generate summary");
-      }
+      // Reload case data to reflect changes
+      await loadCaseData();
     } catch (error) {
-      console.error("Error generating summary:", error);
-      setSummaryError("Failed to generate summary. Please try again.");
+      console.error("Error marking case as resolved:", error);
+      setUpdateError("Failed to mark case as resolved. Please try again.");
     } finally {
-      setSummaryLoading(false);
+      setResolutionLoading(false);
     }
+  };
+
+  const handleMarkUnresolved = async () => {
+    try {
+      setResolutionLoading(true);
+      setUpdateError(null);
+
+      await updateSupportCase(caseId, {
+        resolved: false,
+        status: "open",
+      });
+
+      // Reload case data to reflect changes
+      await loadCaseData();
+    } catch (error) {
+      console.error("Error marking case as unresolved:", error);
+      setUpdateError("Failed to mark case as unresolved. Please try again.");
+    } finally {
+      setResolutionLoading(false);
+    }
+  };
+
+  const handleViewSummary = () => {
+    setSummaryModalVisible(true);
   };
 
   const renderSummaryModal = () => {
@@ -175,9 +201,7 @@ export default function SupportCaseOverview({ caseId }) {
               {aiPerformance.issuesResolved &&
                 aiPerformance.issuesResolved.length > 0 && (
                   <div>
-                    <Box variant="awsui-key-label">
-                      Issues Successfully Resolved
-                    </Box>
+                    <Box variant="awsui-key-label">Resolved Issues</Box>
                     <SpaceBetween size="xs">
                       {aiPerformance.issuesResolved.map((issue, index) => (
                         <Box key={index} variant="p">
@@ -208,33 +232,27 @@ export default function SupportCaseOverview({ caseId }) {
           <Container
             header={<Header variant="h3">Human Agent Involvement</Header>}
           >
-            <SpaceBetween size="m">
-              <ColumnLayout columns={2}>
-                <div>
-                  <Box variant="awsui-key-label">Required</Box>
-                  <Badge color={humanInvolvement.required ? "red" : "green"}>
-                    {humanInvolvement.required ? "Yes" : "No"}
-                  </Badge>
-                </div>
-                {humanInvolvement.required && (
-                  <div>
-                    <Box variant="awsui-key-label">
-                      Effectiveness of Intervention
-                    </Box>
-                    <Box>
-                      {humanInvolvement.effectivenessOfIntervention || "N/A"}
-                    </Box>
-                  </div>
-                )}
-              </ColumnLayout>
+            <ColumnLayout columns={2}>
+              <div>
+                <Box variant="awsui-key-label">Required</Box>
+                <Badge color={humanInvolvement.required ? "red" : "green"}>
+                  {humanInvolvement.required ? "Yes" : "No"}
+                </Badge>
+              </div>
+              <div>
+                <Box variant="awsui-key-label">Effectiveness</Box>
+                <Box>
+                  {humanInvolvement.effectivenessOfIntervention || "N/A"}
+                </Box>
+              </div>
+            </ColumnLayout>
 
-              {humanInvolvement.reasonForEscalation && (
-                <div>
-                  <Box variant="awsui-key-label">Reason for Escalation</Box>
-                  <Box>{humanInvolvement.reasonForEscalation}</Box>
-                </div>
-              )}
-            </SpaceBetween>
+            {humanInvolvement.reasonForEscalation && (
+              <div>
+                <Box variant="awsui-key-label">Escalation Reason</Box>
+                <Box>{humanInvolvement.reasonForEscalation}</Box>
+              </div>
+            )}
           </Container>
 
           {/* Resolution Status */}
@@ -282,8 +300,8 @@ export default function SupportCaseOverview({ caseId }) {
           </Container>
 
           {/* Insights */}
-          <Container header={<Header variant="h3">Insights & Analysis</Header>}>
-            <SpaceBetween size="m">
+          <Container header={<Header variant="h3">Insights</Header>}>
+            <SpaceBetween size="s">
               {insights.customerBehavior && (
                 <div>
                   <Box variant="awsui-key-label">Customer Behavior</Box>
@@ -367,6 +385,15 @@ export default function SupportCaseOverview({ caseId }) {
     return <Box>Case not found</Box>;
   }
 
+  // Check if case has been resolved/unresolved already
+  const hasResolutionStatus =
+    caseData.resolved !== undefined && caseData.resolved !== null;
+  const isResolved = caseData.resolved === true;
+  const hasSummary =
+    caseData.summary &&
+    (typeof caseData.summary === "string" ||
+      typeof caseData.summary === "object");
+
   const keyValueItems = [
     {
       label: "Case ID",
@@ -386,6 +413,16 @@ export default function SupportCaseOverview({ caseId }) {
         <Badge color={PRIORITY_COLORS[caseData.priority] || "grey"}>
           {caseData.priority}
         </Badge>
+      ),
+    },
+    {
+      label: "Resolved",
+      value: hasResolutionStatus ? (
+        <Badge color={isResolved ? "green" : "red"}>
+          {isResolved ? "Yes" : "No"}
+        </Badge>
+      ) : (
+        <Badge color="grey">In Progress</Badge>
       ),
     },
     {
@@ -411,13 +448,40 @@ export default function SupportCaseOverview({ caseId }) {
             description={caseData.description}
             actions={
               <SpaceBetween direction="horizontal" size="xs">
+                {/* Mark as Resolved/Unresolved buttons - disabled if already has resolution status */}
                 <Button
-                  onClick={generateSummary}
-                  loading={summaryLoading}
+                  onClick={handleMarkResolved}
+                  loading={resolutionLoading}
+                  disabled={hasResolutionStatus}
+                  variant={isResolved ? "primary" : "normal"}
+                  iconName={
+                    isResolved ? "status-positive" : "status-in-progress"
+                  }
+                >
+                  Mark as Resolved
+                </Button>
+
+                <Button
+                  onClick={handleMarkUnresolved}
+                  loading={resolutionLoading}
+                  disabled={hasResolutionStatus}
+                  variant={
+                    hasResolutionStatus && !isResolved ? "primary" : "normal"
+                  }
+                  iconName="status-negative"
+                >
+                  Mark as Unresolved
+                </Button>
+
+                {/* View Summary button - disabled if no summary */}
+                <Button
+                  onClick={handleViewSummary}
+                  disabled={!hasSummary}
                   iconName="gen-ai"
                 >
-                  Generate AI Summary
+                  View Summary
                 </Button>
+
                 <Button onClick={loadCaseData} iconName="refresh">
                   Refresh
                 </Button>
@@ -430,6 +494,16 @@ export default function SupportCaseOverview({ caseId }) {
       >
         <SpaceBetween size="l">
           <KeyValuePairs columns={3} items={keyValueItems} />
+
+          {updateError && (
+            <Alert
+              type="error"
+              dismissible
+              onDismiss={() => setUpdateError(null)}
+            >
+              {updateError}
+            </Alert>
+          )}
 
           {summaryError && (
             <Alert
