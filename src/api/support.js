@@ -19,16 +19,6 @@ export const searchIntents = async (text) => {
   return response.data;
 };
 
-// Create a new support case
-export const createSupportCase = async (caseData) => {
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
-  };
-  const response = await axios.post(`${BASE_URL}/cases`, caseData, { headers });
-  return response.data;
-};
-
 // Get presigned URL for file upload to a support case
 export const getSupportCaseUploadUrl = async (caseId, fileName, fileType) => {
   const headers = {
@@ -38,20 +28,6 @@ export const getSupportCaseUploadUrl = async (caseId, fileName, fileType) => {
   const response = await axios.post(
     `${BASE_URL}/cases/${caseId}/upload-url`,
     { fileName, fileType },
-    { headers }
-  );
-  return response.data;
-};
-
-// Add a message to a support case
-export const addSupportCaseMessage = async (caseId, messageData) => {
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
-  };
-  const response = await axios.post(
-    `${BASE_URL}/cases/${caseId}/messages`,
-    messageData,
     { headers }
   );
   return response.data;
@@ -127,4 +103,37 @@ export const getSupportCaseSummary = async (
     { headers }
   );
   return response.data;
+};
+
+// Update the createSupportCase function to match new API
+export const createSupportCase = async (caseData) => {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: localStorage.getItem("userId"),
+  };
+  const response = await axios.post(`${BASE_URL}/cases`, caseData, { headers });
+  return response.data;
+};
+
+// Update the addSupportCaseMessage function to match new API
+export const addSupportCaseMessage = async (caseId, messageData) => {
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: localStorage.getItem("userId"),
+    };
+    const response = await axios.post(
+      `${BASE_URL}/cases/message`,
+      {
+        caseId,
+        senderId: messageData.senderId,
+        text: messageData.text,
+        ...messageData,
+      },
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    // console.error("Error adding support case message);
+  }
 };
