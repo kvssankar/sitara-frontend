@@ -19,7 +19,7 @@ export default function CreateSupportCase() {
   const [isCreating, setIsCreating] = useState(false);
   const [flashMessage, setFlashMessage] = useState(null);
 
-  const customerId = localStorage.getItem("userId") || "";
+  const customerId = "684d43c3234f6819aae4d80e" || "";
 
   const handleSubmit = async () => {
     // Validation

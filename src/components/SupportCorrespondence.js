@@ -105,7 +105,7 @@ export default function SupportCorrespondence({ caseId }) {
       // Add message to local state immediately
       const localMessage = {
         messageId: Date.now().toString(), // Temporary ID
-        senderId: localStorage.getItem("userId"),
+        senderId: "684d43c3234f6819aae4d80e",
         senderType: "customer",
         content: `Intent selected: ${intent.intent}`,
         messageType: "text",
@@ -124,7 +124,7 @@ export default function SupportCorrespondence({ caseId }) {
 
       // Send message to API in background
       const messageData = {
-        senderId: localStorage.getItem("userId"),
+        senderId: "684d43c3234f6819aae4d80e",
         senderType: "customer",
         content: `Intent selected: ${intent.intent}`,
         messageType: "text",
@@ -194,7 +194,7 @@ export default function SupportCorrespondence({ caseId }) {
       }
 
       const messageData = {
-        senderId: localStorage.getItem("userId"),
+        senderId: "684d43c3234f6819aae4d80e",
         senderType: "customer",
         content: inputValue.trim() || "Shared media",
         messageType: mediaUrls.length > 0 ? "media" : "text",
@@ -204,7 +204,7 @@ export default function SupportCorrespondence({ caseId }) {
       // Add message to local state immediately
       const localMessage = {
         messageId: Date.now().toString(), // Temporary ID
-        senderId: localStorage.getItem("userId"),
+        senderId: "684d43c3234f6819aae4d80e",
         senderType: "customer",
         content: inputValue.trim() || "Shared media",
         messageType: mediaUrls.length > 0 ? "media" : "text",

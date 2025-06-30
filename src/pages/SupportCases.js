@@ -45,7 +45,7 @@ export default function SupportCases() {
         breadcrumbs={
           <BreadcrumbGroup
             items={[
-              { text: "Support", href: "/support" },
+              { text: "Support", href: "/support/cases" },
               { text: "My Tickets", href: "/support/cases" },
             ]}
           />

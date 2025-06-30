@@ -47,8 +47,10 @@ export default function ToolsTable({ flashMessages, setFlashMessages }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      alert("Delete tools has been disabled for demo purposes.");
+      return;
       for (const item of selectedItems) {
-        await deleteTool(item.name);
+        // await deleteTool(item.name);
       }
       const updatedItems = items?.filter(
         (item) => !selectedItems.some((selected) => selected.id === item.id)

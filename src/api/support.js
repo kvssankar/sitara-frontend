@@ -6,13 +6,13 @@ const BASE_URL = `${process.env.REACT_APP_API_URL}/support`;
 export const searchIntents = async (text) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.post(
     `${BASE_URL}/search-intents`,
     {
       text,
-      userId: localStorage.getItem("userId"),
+      userId: "684d43c3234f6819aae4d80e",
     },
     { headers }
   );
@@ -23,7 +23,7 @@ export const searchIntents = async (text) => {
 export const getSupportCaseUploadUrl = async (caseId, fileName, fileType) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.post(
     `${BASE_URL}/cases/${caseId}/upload-url`,
@@ -36,7 +36,7 @@ export const getSupportCaseUploadUrl = async (caseId, fileName, fileType) => {
 export const processNewCase = async (caseId) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.post(
     `${BASE_URL}/cases/process/new`,
@@ -50,7 +50,7 @@ export const processNewCase = async (caseId) => {
 export const getSupportCase = async (caseId) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.get(`${BASE_URL}/cases/${caseId}`, { headers });
   return response.data;
@@ -60,7 +60,7 @@ export const getSupportCase = async (caseId) => {
 export const getSupportCases = async () => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.get(`${BASE_URL}/cases`, { headers });
   return response.data;
@@ -70,7 +70,7 @@ export const getSupportCases = async () => {
 export const updateSupportCase = async (caseId, updateData) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.put(`${BASE_URL}/cases/${caseId}`, updateData, {
     headers,
@@ -81,7 +81,7 @@ export const updateSupportCase = async (caseId, updateData) => {
 export const getSupportCaseMessages = async (caseId) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.get(`${BASE_URL}/cases/${caseId}/messages`, {
     headers,
@@ -96,7 +96,7 @@ export const getSupportCaseSummary = async (
 ) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.get(
     `${BASE_URL}/cases/${caseId}/summary?force=${forceRegenerate}`,
@@ -109,7 +109,7 @@ export const getSupportCaseSummary = async (
 export const createSupportCase = async (caseData) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   const response = await axios.post(`${BASE_URL}/cases`, caseData, { headers });
   return response.data;
@@ -120,7 +120,7 @@ export const addSupportCaseMessage = async (caseId, messageData) => {
   try {
     const headers = {
       "Content-Type": "application/json",
-      Authorization: localStorage.getItem("userId"),
+      Authorization: "684d43c3234f6819aae4d80e",
     };
     await axios.post(
       `${BASE_URL}/cases/${caseId}/messages`,

@@ -1,11 +1,11 @@
- import axios from "axios";
+import axios from "axios";
 
 const BASE_URL = `${process.env.REACT_APP_API_URL}/rag`;
 
 export const getPresignedUrl = async (fileName, fileType) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   try {
     const response = await axios.post(
@@ -26,7 +26,7 @@ export const getPresignedUrl = async (fileName, fileType) => {
 export const getFiles = async () => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   try {
     const response = await axios.get(`${BASE_URL}/list-files`, { headers });
@@ -40,7 +40,7 @@ export const getFiles = async () => {
 export const deleteFile = async (fileName) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   try {
     const response = await axios.post(
@@ -60,7 +60,7 @@ export const deleteFile = async (fileName) => {
 export const processFile = async (fileName, fileType) => {
   const headers = {
     "Content-Type": "application/json",
-    Authorization: localStorage.getItem("userId"),
+    Authorization: "684d43c3234f6819aae4d80e",
   };
   try {
     const response = await axios.post(

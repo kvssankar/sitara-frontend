@@ -45,8 +45,10 @@ export default function IntentsTable({ setFlashMessages }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      alert("Delete intents has been disabled for demo purposes.");
+      return;
       for (const item of selectedItems) {
-        await deleteIntent(item.intentid);
+        // await deleteIntent(item.intentid);
       }
       const updatedItems = items?.filter(
         (item) => !selectedItems.some((selected) => selected.id === item.id)
