@@ -1,6 +1,4 @@
-Here’s a focused and well-formatted **README** for your Sitara frontend that **emphasizes Cloudscape usage and AWS deployment (S3 + CloudFront):**
 
----
 
 # **Sitara Frontend – Cloudscape UI + AWS Deployment**
 
@@ -112,7 +110,3 @@ REACT_APP_API_URL=https://your-api-gateway-url
 * **Highly scalable & global delivery** with CloudFront
 * **Secure uploads** using presigned URLs
 * **Optimized SPA routing** with S3 + CloudFront error redirects
-
----
-
-Let me know if you want to include instructions for **custom domain binding**, **CI/CD deployment**, or **SPA 404 redirects using Lambda\@Edge**.
