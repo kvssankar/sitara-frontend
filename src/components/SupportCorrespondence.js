@@ -10,15 +10,18 @@ import {
   Alert,
   StatusIndicator,
   Header,
-  Grid,
+  Cards,
+  Badge,
 } from "@cloudscape-design/components";
 import {
   addSupportCaseMessage,
   getSupportCaseMessages,
   getSupportCaseUploadUrl,
+  getSupportCase,
+  updateSupportCase,
 } from "../api/support";
 import moment from "moment";
-import "./SupportCorrespondence.css"; // We'll create this CSS file
+import "./SupportCorrespondence.css";
 
 const SUPPORTED_FILE_TYPES = [
   "image/jpeg",
@@ -36,8 +39,15 @@ export default function SupportCorrespondence({ caseId }) {
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // Intent selection state
+  const [caseData, setCaseData] = useState(null);
+  const [pendingIntents, setPendingIntents] = useState([]);
+  const [showIntentSelection, setShowIntentSelection] = useState(false);
+  const [isSelectingIntent, setIsSelectingIntent] = useState(false);
+
   useEffect(() => {
     if (caseId) {
+      loadCaseData();
       loadMessages();
     }
   }, [caseId]);
@@ -50,6 +60,30 @@ export default function SupportCorrespondence({ caseId }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const loadCaseData = async () => {
+    try {
+      const response = await getSupportCase(caseId);
+      setCaseData(response);
+
+      // Check if we need to show intent selection
+      const needsIntentSelection =
+        response?.pendingIntents &&
+        response.pendingIntents.length > 0 &&
+        !response.intentId;
+
+      if (needsIntentSelection) {
+        setPendingIntents(response.pendingIntents);
+        setShowIntentSelection(true);
+      } else {
+        setShowIntentSelection(false);
+        setPendingIntents([]);
+      }
+    } catch (error) {
+      console.error("Error loading case data:", error);
+      setError("Failed to load case information");
+    }
+  };
+
   const loadMessages = async () => {
     try {
       setLoading(true);
@@ -60,6 +94,57 @@ export default function SupportCorrespondence({ caseId }) {
       setError("Failed to load correspondence");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleIntentSelect = async (intent) => {
+    setIsSelectingIntent(true);
+    setError(null);
+
+    try {
+      // Add message to local state immediately
+      const localMessage = {
+        messageId: Date.now().toString(), // Temporary ID
+        senderId: localStorage.getItem("userId"),
+        senderType: "customer",
+        content: `Intent selected: ${intent.intent}`,
+        messageType: "text",
+        mediaUrls: [],
+        createdAt: new Date().toISOString(), // Current timestamp
+        isIntentSelection: true,
+      };
+
+      setMessages((prev) => [...prev, localMessage]);
+
+      // Update the support case with selected intent
+      await updateSupportCase(caseId, {
+        intentId: intent.intentId || intent.intentid,
+        pendingIntents: null, // Clear pending intents
+      });
+
+      // Send message to API in background
+      const messageData = {
+        senderId: localStorage.getItem("userId"),
+        senderType: "customer",
+        content: `Intent selected: ${intent.intent}`,
+        messageType: "text",
+        mediaUrls: [],
+        isIntentSelection: true,
+      };
+
+      addSupportCaseMessage(caseId, messageData).catch((error) => {
+        console.error("Error sending intent selection message:", error);
+      });
+
+      // Hide intent selection and reload case data
+      setShowIntentSelection(false);
+      setPendingIntents([]);
+      await loadCaseData();
+    } catch (error) {
+      console.error("Error selecting intent:", error);
+      setError("Failed to select intent. Please try again.");
+    } finally {
+      setIsSelectingIntent(false);
     }
   };
 
@@ -96,7 +181,7 @@ export default function SupportCorrespondence({ caseId }) {
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() && selectedFiles.length === 0) return;
-    if (inputValue.length > 150) return;
+    if (inputValue.length > 500) return;
 
     try {
       setLoading(true);
@@ -116,11 +201,29 @@ export default function SupportCorrespondence({ caseId }) {
         mediaUrls,
       };
 
-      const newMessage = await addSupportCaseMessage(caseId, messageData);
-      setMessages((prev) => [...prev, newMessage]);
+      // Add message to local state immediately
+      const localMessage = {
+        messageId: Date.now().toString(), // Temporary ID
+        senderId: localStorage.getItem("userId"),
+        senderType: "customer",
+        content: inputValue.trim() || "Shared media",
+        messageType: mediaUrls.length > 0 ? "media" : "text",
+        mediaUrls,
+        createdAt: new Date().toISOString(), // Current timestamp
+      };
 
+      setMessages((prev) => [...prev, localMessage]);
+
+      // Clear input immediately
       setInputValue("");
       setSelectedFiles([]);
+
+      // Send to API in background (ignore response)
+      addSupportCaseMessage(caseId, messageData).catch((error) => {
+        console.error("Error sending message:", error);
+        setError("Failed to send message. Please try again.");
+      });
+
       setError(null);
     } catch (error) {
       console.error("Error sending message:", error);
@@ -132,6 +235,7 @@ export default function SupportCorrespondence({ caseId }) {
   };
 
   const handleKeyPress = (event) => {
+    // Only handle Enter key, allow all other keys (including Ctrl+V for paste)
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage();
@@ -228,13 +332,15 @@ export default function SupportCorrespondence({ caseId }) {
         <Header
           variant="h2"
           actions={
-            <Button
-              variant="primary"
-              onClick={() => window.location.reload()}
-              iconName="refresh"
-            >
-              Reply
-            </Button>
+            !showIntentSelection && (
+              <Button
+                variant="primary"
+                onClick={() => window.location.reload()}
+                iconName="refresh"
+              >
+                Refresh
+              </Button>
+            )
           }
         >
           Correspondence
@@ -248,124 +354,151 @@ export default function SupportCorrespondence({ caseId }) {
           </Alert>
         )}
 
-        {/* Messages Area - Table Style */}
-        <div className="correspondence-container">
-          {messages.length === 0 ? (
-            <Box textAlign="center" color="text-status-inactive" padding="l">
-              No messages yet. Start the conversation below.
-            </Box>
-          ) : (
-            messages.map(renderMessage)
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+        {/* Intent Selection Section */}
+        {showIntentSelection && (
+          <Container>
+            <SpaceBetween size="m">
+              <Alert type="info" dismissible={false}>
+                <SpaceBetween size="xs">
+                  <div>
+                    <strong>Please select a category for your issue</strong>
+                  </div>
+                  <div>
+                    We found multiple categories that might match your problem.
+                    Please select the one that best describes your issue to
+                    continue.
+                  </div>
+                </SpaceBetween>
+              </Alert>
 
-        {/* Reply Section */}
-        <Container header={<Header variant="h3">Reply</Header>}>
-          <SpaceBetween size="m">
-            <FormField>
-              <Textarea
-                value={inputValue}
-                onChange={({ detail }) => {
-                  if (detail.value.length <= 150) {
-                    setInputValue(detail.value);
+              <Header variant="h3">
+                Select the category that best matches your issue:
+              </Header>
+
+              <Cards
+                cardDefinition={{
+                  header: (item) => (
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <Header variant="h4">{item.intent}</Header>
+                      {item.confidenceScore && (
+                        <Badge
+                          color={item.confidenceScore > 80 ? "green" : "blue"}
+                        >
+                          {Math.round(item.confidenceScore)}% match
+                        </Badge>
+                      )}
+                    </SpaceBetween>
+                  ),
+                  sections: [
+                    {
+                      content: (item) =>
+                        item.description || "No description available",
+                    },
+                  ],
+                }}
+                items={pendingIntents}
+                selectionType="single"
+                onSelectionChange={({ detail }) => {
+                  if (detail.selectedItems.length > 0) {
+                    handleIntentSelect(detail.selectedItems[0]);
                   }
                 }}
-                onKeyDown={handleKeyPress}
-                placeholder="Type your message here..."
-                rows={8}
-                disabled={loading}
-                invalid={inputValue.length > 150}
+                loading={isSelectingIntent}
+                loadingText="Selecting intent..."
               />
-              <Box
-                fontSize="body-s"
-                color={
-                  inputValue.length > 150
-                    ? "text-status-error"
-                    : "text-status-inactive"
-                }
-                textAlign="right"
-                margin={{ top: "xs" }}
-              >
-                Maximum 150 characters ({150 - inputValue.length} remaining)
-                {inputValue.length > 150 && (
-                  <Box color="text-status-error">
-                    Message exceeds character limit
-                  </Box>
-                )}
-              </Box>
-            </FormField>
-
-            {/* Attachments Section */}
-            <Box>
-              <Box variant="awsui-key-label" margin={{ bottom: "xs" }}>
-                Attachments
-              </Box>
-              <Button
-                variant="normal"
-                iconName="upload"
-                onClick={handleFileSelect}
-                disabled={loading}
-              >
-                Choose files
-              </Button>
-              <Box
-                fontSize="body-s"
-                color="text-status-inactive"
-                margin={{ top: "xs" }}
-              >
-                Up to 3 attachments, each less than 5MB.
-              </Box>
-
-              {selectedFiles.length > 0 && (
-                <Box margin={{ top: "s" }}>
-                  <SpaceBetween size="xs">
-                    {selectedFiles.map((file, index) => (
-                      <Box key={index} display="flex">
-                        <Box flex="1">{file.name}</Box>
-                        <Button
-                          variant="inline-link"
-                          onClick={() => {
-                            setSelectedFiles((files) =>
-                              files.filter((_, i) => i !== index)
-                            );
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </Box>
-                    ))}
-                  </SpaceBetween>
-                </Box>
-              )}
-            </Box>
-
-            {/* Submit Buttons */}
-            <SpaceBetween direction="horizontal" size="s">
-              <Button
-                variant="normal"
-                disabled={loading}
-                onClick={() => {
-                  setInputValue("");
-                  setSelectedFiles([]);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleSendMessage}
-                loading={loading || uploadingFiles}
-                disabled={
-                  (!inputValue.trim() && selectedFiles.length === 0) ||
-                  inputValue.length > 150
-                }
-              >
-                Submit
-              </Button>
             </SpaceBetween>
-          </SpaceBetween>
-        </Container>
+          </Container>
+        )}
+
+        {/* Messages Area - Only show when not selecting intent */}
+        {!showIntentSelection && (
+          <>
+            <div className="correspondence-container">
+              {messages.length === 0 ? (
+                <Box
+                  textAlign="center"
+                  color="text-status-inactive"
+                  padding="l"
+                >
+                  No messages yet. Start the conversation below.
+                </Box>
+              ) : (
+                messages.map(renderMessage)
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Reply Section - Only show when not selecting intent */}
+            <Container header={<Header variant="h3">Reply</Header>}>
+              <SpaceBetween size="m">
+                <FormField>
+                  <Textarea
+                    value={inputValue}
+                    onChange={({ detail }) => {
+                      // Allow pasting and truncate if necessary
+                      const newValue =
+                        detail.value.length > 500
+                          ? detail.value.substring(0, 500)
+                          : detail.value;
+                      setInputValue(newValue);
+                    }}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Type your message here..."
+                    rows={8}
+                    disabled={loading}
+                    invalid={inputValue.length > 500}
+                  />
+                  <Box
+                    fontSize="body-s"
+                    color={
+                      inputValue.length > 500
+                        ? "text-status-error"
+                        : "text-status-inactive"
+                    }
+                    textAlign="right"
+                  >
+                    {inputValue.length}/500 characters
+                  </Box>
+                </FormField>
+
+                <FormField label="Attach images (optional)">
+                  <SpaceBetween size="s">
+                    <Button
+                      variant="normal"
+                      iconName="upload"
+                      onClick={handleFileSelect}
+                      disabled={loading}
+                    >
+                      Choose files
+                    </Button>
+
+                    {selectedFiles.length > 0 && (
+                      <Box>
+                        Selected files:{" "}
+                        {selectedFiles.map((f) => f.name).join(", ")}
+                      </Box>
+                    )}
+                  </SpaceBetween>
+                </FormField>
+
+                <Box textAlign="right">
+                  <Button
+                    variant="primary"
+                    onClick={handleSendMessage}
+                    disabled={
+                      loading ||
+                      (!inputValue.trim() && selectedFiles.length === 0) ||
+                      inputValue.length > 500
+                    }
+                    loading={loading || uploadingFiles}
+                  >
+                    {uploadingFiles ? "Uploading..." : "Send Message"}
+                  </Button>
+                </Box>
+              </SpaceBetween>
+            </Container>
+          </>
+        )}
       </SpaceBetween>
     </Container>
   );

@@ -452,7 +452,7 @@ export default function SupportCaseOverview({ caseId }) {
                 <Button
                   onClick={handleMarkResolved}
                   loading={resolutionLoading}
-                  disabled={hasResolutionStatus}
+                  // disabled={hasResolutionStatus}
                   variant={isResolved ? "primary" : "normal"}
                   iconName={
                     isResolved ? "status-positive" : "status-in-progress"

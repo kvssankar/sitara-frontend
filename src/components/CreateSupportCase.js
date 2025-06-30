@@ -58,7 +58,7 @@ export default function CreateSupportCase() {
       // Step 2: Add initial message
       await addSupportCaseMessage(caseId, {
         senderId: customerId,
-        text: description.trim(),
+        content: description.trim(),
       });
 
       // Success! Reset form

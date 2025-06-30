@@ -122,18 +122,26 @@ export const addSupportCaseMessage = async (caseId, messageData) => {
       "Content-Type": "application/json",
       Authorization: localStorage.getItem("userId"),
     };
+    await axios.post(
+      `${BASE_URL}/cases/${caseId}/messages`,
+      {
+        caseId,
+        ...messageData,
+      },
+      { headers }
+    );
     const response = await axios.post(
       `${BASE_URL}/cases/message`,
       {
         caseId,
         senderId: messageData.senderId,
-        text: messageData.text,
+        text: messageData.text || messageData.content, // Use text or content based on your API
         ...messageData,
       },
       { headers }
     );
     return response.data;
   } catch (error) {
-    // console.error("Error adding support case message);
+    throw new Error(`Failed to add message to support case: ${error.message}`);
   }
 };
